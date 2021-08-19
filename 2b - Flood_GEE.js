@@ -1,25 +1,73 @@
-//#################################################################
-// CALCULATING FLOODED AREA OF MULTIPLE ADMINS FOR SINGLE EVENT
-// Adapted from Sentinel-1 based flood mapping tutorial from https://www.youtube.com/watch?v=tT9iD9wRzUo
-//#################################################################
-// Run in Google Earth Engine after importing the following (note variable names)...
-// Admin2 : FAO Admin Level 2
-// s1: Sentinel 1 SAR GRD
-// JRC: JRC Global surface water mapping layers, v1.3
-// WWF: WWF Hydrosheds Void-filled DEM, 3-arc seconds
+/*===========================================================================================
+                       SAR-FLOOD MAPPING USING A CHANGE DETECTION APPROACH
+  ===========================================================================================
+  This script uses SAR Sentinel-1 GDR images to generate flood extent maps. This code extracts
+  flooding extents for all admin codes of a given country. Change detection was used to compare 
+  before- and after- flood event images. Ground Range Detected imagery already includes the 
+  following preprocessing steps: Thermal-Noise Removal, Radiometric calibration, Terrain-
+  correction hence only a Speckle filter needs to be applied in the preprocessing.
 
+  Adapted this tutorial: https://www.youtube.com/watch?v=tT9iD9wRzUo
+
+//===========================================================================================
+                                  IMPORT NECESSARY DATASETS
+
+  Run in Google Earth Engine after importing the following (note variable names)
+
+    - Admin2: FAO Admin Level 2
+    - s1: Sentinel 1 SAR GRD
+    - JRC: JRC Global surface water mapping layers, v1.3
+    - WWF: WWF HydroSHEDS Void-filled DEM
+
+/*******************************************************************************************
+                                  SELECT YOUR OWN STUDY AREA
+                                   (Set country of interest)*/
+
+var country = 'Burkina Faso';
+
+/*******************************************************************************************
+                                       SET TIME FRAME
+                               (Set start date of a flooding event)*/
+
+var flood_event = new Date('2016-09-14');
+
+/********************************************************************************************
+                           SET SAR PARAMETERS (can be left default)*/
+
+var polarization = 'VH'; /*or 'VV' --> VH mostly is the preferred polarization for flood mapping.
+                           However, it always depends on your study area, you can select 'VV'
+                           as well.*/
+var pass_direction = 'ASCENDING'; /* or 'ASCENDING' when images are being compared use only one
+                           pass direction. Consider changing this parameter, if your image
+                           collection is empty. In some areas more Ascending images exist than
+                           than descending or the other way around.*/
+var difference_threshold = 1.25; /*threshold to be applied on the difference image (after flood
+                           - before flood). It has been chosen by trial and error. In case your
+                           flood extent result shows many false-positive or negative signals,
+                           consider changing it! */
+
+
+/********************************************************************************************
+  ---->>> DO NOT EDIT THE SCRIPT PAST THIS POINT! (unless you know what you are doing) <<<---
+  ------------------>>> now hit the'RUN' at the top of the script! <<<-----------------------
+  -----> The final flood product will be ready for download on the right (under tasks) <-----
+
+  ******************************************************************************************/
+
+//---------------------------------- Translating User Inputs ------------------------------//
+
+//------------------------------- DATA SELECTION & PREPROCESSING --------------------------//
 
 // FOR SINGLE DATE
-var events = new Date('2018-09-01');
-var before_event = new Date(events);
-before_event.setDate(before_event.getDate() - 12); // Before the flood
-var after_event = new Date(events);
-after_event.setDate(after_event.getDate() + 12); // After the flood
+var before_event = new Date(flood_event);
+before_event.setDate(before_event.getDate() - 24); // Before the flood
+var after_event = new Date(flood_event);
+after_event.setDate(after_event.getDate() + 24); // After the flood
 
 
 // FOR EVERY FEATURE IN ADMIN2
 var admin2 = ee.FeatureCollection(Admin2)
-  .filter(ee.Filter.eq('ADM0_NAME', 'Burkina Faso'));
+  .filter(ee.Filter.eq('ADM0_NAME', country));
 
 var for_every_feature = function(feature) {
 
@@ -32,15 +80,15 @@ var for_every_feature = function(feature) {
   // Filter satellite data to geometry
   var collection = s1
     .filter(ee.Filter.eq('instrumentMode','IW')) // this is the sentinel band we are interested in
-    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH')) // this is the property we want to pass through the filter - so we only have VV and VH bands
-    .filter(ee.Filter.eq('orbitProperties_pass', 'ASCENDING'))  // Devise better image selection practice!!! - choose ascending OR descending (DO NOT MIX)
+    .filter(ee.Filter.listContains('transmitterReceiverPolarisation', polarization))
+    .filter(ee.Filter.eq('orbitProperties_pass', pass_direction))
     .filter(ee.Filter.eq('resolution_meters', 10)) // makes sure you get the same resolution data
     .filterBounds(geometry)
-    .select('VH');
+    .select(polarization);
 
   // Extract before and after images
-  var beforeCollection = collection.filterDate(before_event, events);
-  var afterCollection = collection.filterDate(events, after_event);
+  var beforeCollection = collection.filterDate(before_event, flood_event);
+  var afterCollection = collection.filterDate(flood_event, after_event);
   var before = beforeCollection.mosaic().clip(geometry); // takes the most recent image of collection
   var after = afterCollection.first().clip(geometry); // takes the first image of collection // NOTE: There are some issues with early Sentinel images (prior to 2016)
 
@@ -51,7 +99,7 @@ var for_every_feature = function(feature) {
     // Subtract difference between the before and after (Division is best method here)
   var difference = afterFiltered.divide(beforeFiltered);
   // Define Threshold
-  var diffThreshold = 1.25;
+  var diffThreshold = difference_threshold;
   // INITIAL ESTIMATE of flooded pixels
   var flooded = difference.gt(diffThreshold).rename('water').selfMask();
 
@@ -93,7 +141,6 @@ Export.table.toDrive({
   fileFormat: 'CSV'
 });
 
-// ADD: Still need to iterate over multiple events
 
 
 // ##########################
