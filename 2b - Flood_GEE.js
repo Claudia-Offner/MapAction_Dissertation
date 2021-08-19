@@ -1,13 +1,15 @@
 /*===========================================================================================
                        SAR-FLOOD MAPPING USING A CHANGE DETECTION APPROACH
   ===========================================================================================
-  This script uses SAR Sentinel-1 GDR images to generate flood extent maps. This code extracts
-  flooding extents for all admin codes of a given country. Change detection was used to compare 
-  before- and after- flood event images. Ground Range Detected imagery already includes the 
+  This script uses SAR Sentil-1 GDR images to generate flood extent maps. This code extracts
+  flooding extents for all admin codes of a given country. Change detection was used to compare
+  before- and after- flood event images. Ground Range Detected imagery already includes the
   following preprocessing steps: Thermal-Noise Removal, Radiometric calibration, Terrain-
   correction hence only a Speckle filter needs to be applied in the preprocessing.
 
-  Adapted this tutorial: https://www.youtube.com/watch?v=tT9iD9wRzUo
+  Adapted from this tutorial: https://www.youtube.com/watch?v=tT9iD9wRzUo
+
+  Access code in GEE: https://code.earthengine.google.com/44c6061d4597bf2ec6c4cffcfee5028f
 
 //===========================================================================================
                                   IMPORT NECESSARY DATASETS
@@ -37,7 +39,7 @@ var flood_event = new Date('2016-09-14');
 var polarization = 'VH'; /*or 'VV' --> VH mostly is the preferred polarization for flood mapping.
                            However, it always depends on your study area, you can select 'VV'
                            as well.*/
-var pass_direction = 'ASCENDING'; /* or 'ASCENDING' when images are being compared use only one
+var pass_direction = 'ASCENDING'; /* or 'DESCENDING' when images are being compared use only one
                            pass direction. Consider changing this parameter, if your image
                            collection is empty. In some areas more Ascending images exist than
                            than descending or the other way around.*/
