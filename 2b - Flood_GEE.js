@@ -10,6 +10,8 @@
   Adapted from this tutorial: https://www.youtube.com/watch?v=tT9iD9wRzUo
 
   Access code in GEE: https://code.earthengine.google.com/44c6061d4597bf2ec6c4cffcfee5028f
+  Access code in GitHub: https://github.com/Claudia-Offner/MapActionDissertation/blob/master/2b%20-%20Flood_GEE.js
+
 
 //===========================================================================================
                                   IMPORT NECESSARY DATASETS
